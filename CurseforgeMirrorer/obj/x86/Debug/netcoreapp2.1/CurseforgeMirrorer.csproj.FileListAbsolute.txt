@@ -1,0 +1,11 @@
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\bin\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.deps.json
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\bin\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.runtimeconfig.json
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\bin\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.runtimeconfig.dev.json
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\bin\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.dll
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\bin\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.pdb
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\obj\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.csprojAssemblyReference.cache
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\obj\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.csproj.CoreCompileInputs.cache
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\obj\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.AssemblyInfoInputs.cache
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\obj\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.AssemblyInfo.cs
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\obj\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.dll
+C:\Users\Ian\source\repos\CurseforgeMirrorer\CurseforgeMirrorer\obj\x86\Debug\netcoreapp2.1\CurseforgeMirrorer.pdb
