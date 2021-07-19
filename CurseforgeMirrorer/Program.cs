@@ -16,6 +16,7 @@ using System.IO;
 using Form = System.Windows.Forms.Form;
 
 using Microsoft.Win32;
+using System.Text.RegularExpressions;
 
 namespace Interop
 {
@@ -63,57 +64,228 @@ namespace CurseforgeMirrorer
 {
     public class Image
     {
-        public string Filepath = string.Empty;
-        public string URL = string.Empty;
+        public string Filepath 
+            = string.Empty;
+        public string URL
+            = string.Empty;
+        [JsonIgnore]
         public bool FileExists { get => File.Exists(Filepath); }
     }
 
     public class DownloadFile
     {
-        public string Filename;
-        public int Id;
-        public bool Downloaded;
+        [JsonProperty(PropertyName = "f")]
+        public string Filename
+            = string.Empty;
+        [JsonProperty(PropertyName = "i")]
+        public int Id
+            = 0;
+        [JsonProperty(PropertyName = "d")]
+        public bool Downloaded
+            = false;
+
+        [JsonProperty(PropertyName = "c")]
+        public int DownloadCount
+            = 0;
+
+        [JsonProperty(PropertyName = "u")]
+        public DateTime UploadDate
+            = DateTime.UnixEpoch;
+
+        [JsonIgnore]
+        public Version __Versions = new Version();
+        public long VA { get => __Versions.VersionsA; set => __Versions.VersionsA = value; }
+        public long VB { get => __Versions.VersionsB; set => __Versions.VersionsB = value; }
+
         [JsonIgnore]
         public bool UseURL { get => Url != null && Url.Length > 0; }
-        public string Url;
-        public bool DownloadedFilePage;
+
+        [JsonProperty(PropertyName = "r")]
+        public string Url
+            = string.Empty;
+
+        [JsonProperty(PropertyName = "z")]
+        public bool DownloadedFilePage
+            = false;
+    }
+
+    public class Version
+    {
+        public static string[] VersionsString =
+        {
+            "Fabric","Forge","Rift",
+            "Java 10", "Java 9", "Java 8", "Java 7", "Java 6",
+            "1.17", "1.17-Snapshot",
+            "1.16.5", "1.16.4", "1.16.3", "1.16.2", "1.16.1", "1.16", "1.16-Snapshot",
+            "1.15.2", "1.15.1", "1.15", "1.15-Snapshot",
+            "1.14.4", "1.14.3", "1.14.2", "1.14.1", "1.14", "1.14-Snapshot",
+            "1.13.2", "1.13.1", "1.13", "1.13-Snapshot",
+            "1.12.2", "1.12.1", "1.12", "1.12-Snapshot",
+            "1.11.2", "1.11.1", "1.11", "1.11-Snapshot",
+            "1.10.2", "1.10.1", "1.10", "1.10-Snapshot",
+            "1.9.4", "1.9.3", "1.9.2", "1.9.1", "1.9", "1.9-Snapshot",
+            "1.8.9", "1.8.8", "1.8.7", "1.8.6", "1.8.5", "1.8.4", "1.8.3", "1.8.2", "1.8.1", "1.8", "1.8-Snapshot",
+            "1.7.10", "1.7.9", "1.7.8", "1.7.7", "1.7.6", "1.7.5", "1.7.4", "1.7.3", "1.7.2",
+            "1.6.4", "1.6.2", "1.6.1",
+            "1.5.2", "1.5.1", "1.5.0",
+            "1.4.7", "1.4.6", "1.4.5", "1.4.4", "1.4.2",
+            "1.3.2", "1.3.1",
+            "1.2.5", "1.2.4", "1.2.3", "1.2.2", "1.2.1",
+            "1.1",
+            "1.0.0"
+        };
+
+        public static List<string> VersionsStringList = new List<string>(VersionsString);
+
+        public bool HasVersion(int i)
+        {
+            if (i < 64)
+                return (VersionsA & ((long)1 << i)) != 0;
+            else
+                return (VersionsB & ((long)1 << (i - 64))) != 0;
+        }
+
+        public IEnumerable<string> GetVersions()
+        {
+            List<string> vs = new List<string>();
+
+            for (int i = 0; i < VersionsString.Length; i++)
+                if (HasVersion(i))
+                    vs.Add(VersionsString[i]);
+
+            return vs;
+        }
+
+        public void AddVersion(int i)
+        {
+            if (i < 64)
+                VersionsA |= (long)1 << i;
+            else
+                VersionsB |= (long)1 << (i - 64);
+        }
+
+        public void AddVersion(string version)
+        {
+            if (VersionsString.Contains(version))
+                AddVersion(VersionsStringList.IndexOf(version));
+        }
+
+        public long VersionsA { get; set; }
+        public long VersionsB { get; set; }
+    }
+
+    public class Category
+    {
+        public static string[] CategoriesString = { //verified 1/13/2021
+            "World Gen",
+            "Biomes",
+            "Ores and Resources",
+            "Structures",
+            "Dimensions",
+            "Mobs",
+            "Technology",
+            "Processing",
+            "Player Transport",
+            "Energy, Fluid, and Item Transport",
+            "Farming",
+            "Energy",
+            "Redstone",
+            "Genetics",
+            "Magic",
+            "Storage",
+            "API and Library",
+            "Adventure and RPG",
+            "Map and Information",
+            "Cosmetic",
+            "Miscellaneous",
+            "Addons",
+            "Thermal Expansion",
+            "Tinker's Construct",
+            "Industrial Craft",
+            "Thaumcraft",
+            "Buildcraft",
+            "Forestry",
+            "Blood Magic",
+            "Lucky Blocks",
+            "Applied Energistics 2",
+            "CraftTweaker",
+            "Armor, Tools, and Weapons",
+            "Server Utility",
+            "Food",
+            "Twitch Integration",
+            "Fabric"
+        };
+
+        public static List<string> CategoriesStringList = new List<string>(CategoriesString);
+
+        public bool HasCategory(int i)
+        {
+            return (Categories & ((long)1 << i)) != 0;
+        }
+
+        public IEnumerable<string> GetCategories()
+        {
+            List<string> vs = new List<string>();
+
+            for (int i = 0; i < CategoriesString.Length; i++)
+                if (HasCategory(i))
+                    vs.Add(CategoriesString[i]);
+
+            return vs;
+        }
+
+        public void AddCategory(int i)
+        {
+            Categories |= (long)1 << i;
+        }
+
+        public void AddCategory(string category)
+        {
+            if (CategoriesString.Contains(category))
+                AddCategory(CategoriesStringList.IndexOf(category));
+        }
+
+        public long Categories { get; set; }
     }
 
     public class Mod
     {
         public string ModIdentifier = string.Empty;
         public string ModName = string.Empty;
-        public Image CoverImage
-            = new Image();
-        //Purge
-        [JsonIgnore]
-        public List<DownloadFile> _Files
-            = new List<DownloadFile>();
-        public List<int> Files
-            = new List<int>();
+        public Image CoverImage = new Image();
+        public List<int> Files = new List<int>();
         public DateTime CreationDate = DateTime.UnixEpoch;
         public DateTime UpdateDate = DateTime.UnixEpoch;
         public string Synopsis = string.Empty;
         public string Description = string.Empty;
         public string DescriptionHTML = string.Empty;
         public string Author = string.Empty;
-        public HashSet<string> CompleteAuthorList
-            = new HashSet<string>();
-        public List<int> ParsedPages
-            = new List<int>();
+        public HashSet<string> CompleteAuthorList = new HashSet<string>();
+        public List<int> ParsedPages = new List<int>();
         public int PageCount = 0;
         public int DownloadCount = 0;
-        public HashSet<string> Images
-            = new HashSet<string>();
-        public HashSet<string> Categories
-            = new HashSet<string>();
+        public HashSet<string> Images = new HashSet<string>();
+        [JsonIgnore]
+        public Category __Categories = new Category();
+        public long Categories { get => __Categories.Categories; set => __Categories.Categories = value; }
+        
         public int ProjectId = 0;
+
+        [JsonIgnore]
         public bool HasSource { get => SourceURL.Length > 0; }
+        [JsonIgnore]
         public bool HasImage { get => CoverImage.URL.Length > 0; }
 
+        public bool HasScreenshots = false;
+
         public string SourceURL = string.Empty;
-        public bool SourceTar = false;
         public bool FailedToRetrieveSource = false;
+
+        //Extra state
+        //Added after starting a good scrape.
+        public bool ModpageRechecked = false;
+        public bool FailedToRetrieveExtraMetadata = false;
+        public bool FailedToRetrieveImages = false;
     }
 
     public class Program
@@ -121,6 +293,10 @@ namespace CurseforgeMirrorer
         [JsonIgnore]
         public static StreamWriter logFile
             = new StreamWriter(File.Open("files.txt", FileMode.Append, FileAccess.Write, FileShare.Read));
+
+        [JsonIgnore]
+        public static StreamWriter linkFile
+            = new StreamWriter(File.Open("cdnLinks.txt", FileMode.Append, FileAccess.Write, FileShare.Read));
 
         [JsonIgnore]
         public static StreamWriter failFile
@@ -134,6 +310,8 @@ namespace CurseforgeMirrorer
         public static WebClient CDNClient
             = new WebClient();
 
+        public static int requestCount;
+
         public static Dictionary<string, Mod> Mods
             = new Dictionary<string, Mod>();
 
@@ -145,15 +323,9 @@ namespace CurseforgeMirrorer
         public static Queue<string> ModsToCaptureInfoPage
             = new Queue<string>();
 
-        //Purge
-        public static Queue<KeyValuePair<Mod, DownloadFile>> _FilesToDownload
-            = new Queue<KeyValuePair<Mod, DownloadFile>>();
         public static Queue<KeyValuePair<string, int>> FilesToDownload
             = new Queue<KeyValuePair<string, int>>();
 
-        //Purge
-        public static Queue<KeyValuePair<Mod, DownloadFile>> _FilesToCaptureDownloadPage
-            = new Queue<KeyValuePair<Mod, DownloadFile>>();
         public static Queue<KeyValuePair<string, int>> FilesToCaptureDownloadPage
             = new Queue<KeyValuePair<string, int>>();
 
@@ -167,22 +339,23 @@ namespace CurseforgeMirrorer
         public static List<Func<bool>> MirrorActions
             = new List<Func<bool>>();
 
-        /// <summary>
-        /// Add parsed mod identifers from the main page here
-        /// </summary>
         public static List<string> ParsedModIdentifiers
             = new List<string>();
+
         public static HashSet<string> CompletedMods
             = new HashSet<string>();
+
         public static List<int> ParsedPages
             = new List<int>();
+
         public static HashSet<string> CompletedModInfo
             = new HashSet<string>();
+
         public static HashSet<string> FailedToCaptureInfoPage
             = new HashSet<string>();
 
         [JsonIgnore]
-        public static int PageCount = 964; //941 Total pages ?page=
+        public static int PageCount = 1095; //941 Total pages ?page=
 
         [JsonIgnore]
         public static Random gRandom
@@ -205,9 +378,14 @@ namespace CurseforgeMirrorer
             float x = (float)gRandom.NextDouble();
             x = -((x - 0.5f) * (x - 0.5f));
             x *= 4;
+            /*
             int mx = 0 - 10;
             x *= mx;
             x += 10;
+            */
+            int mx = 0 - 5;
+            x *= mx;
+            x += 2.0f;
             return (int)x;
         }
 
@@ -223,22 +401,27 @@ namespace CurseforgeMirrorer
             Console.Write("Making request to {0}...", url);
             HtmlDocument htmlDocument = new HtmlDocument();
             htmlDocument.Load(ProxyClient.OpenRead(url));
+            requestCount++;
             Console.WriteLine("Complete.");
             lastRequest = DateTime.Now;
 
             if (htmlDocument.DocumentNode.ChildNodes.Count < 1)
             {
-                if (tries > 2)
+                if (tries == 0)
+                    return GetHtmlDocument(url, tries + 1); //Grace retry
+
+                if (tries > 20) //was 2
                 {
                     Console.WriteLine($"Could not download page: {url} after 3 tries");
                     return htmlDocument;
                 }
                 else
                 {
-                    //Console.WriteLine("Would you like to retry this request? It could have been a captcha.");
-                    //Console.WriteLine("Press any key to continue, ^C to terminate program");
-                    //Console.ReadKey(true);
-                    NeedUserAttention(1, "Would you like to retry this request? It could have been a captcha.");
+                    Interop.Interop.FlashWindowEx();
+                    Console.WriteLine("Would you like to retry this request? It could have been a captcha.");
+                    Console.WriteLine("Press any key to continue, ^C to terminate program");
+                    Console.ReadKey(true);
+                    //NeedUserAttention(1, "Would you like to retry this request? It could have been a captcha.");
                     Console.WriteLine($"Retrying...");
 
                     return GetHtmlDocument(url, tries + 1);
@@ -261,6 +444,201 @@ namespace CurseforgeMirrorer
             htmlDocument.Load(CDNClient.OpenRead("http://iansweb.org"));
             Console.WriteLine("Complete.");
             lastRequest = DateTime.Now;
+        }
+
+        //REMEMBER TO SET MODPAGERECHECKED
+        public static bool DownloadMetadata(Mod mod, HtmlDocument doc = null)
+        {
+            mod.ModpageRechecked = true; //Set here. Do not return to function unless changes are made
+            mod.FailedToRetrieveExtraMetadata = true;
+            try
+            {
+                Console.WriteLine($"Downloading metadata of {mod.ModIdentifier}");
+
+                string url = $"http://www.curseforge.com/minecraft/mc-mods/{mod.ModIdentifier}";
+                //HtmlDocument doc = null;
+                if (doc is null)
+                {
+                    try
+                    {
+                        doc = GetHtmlDocument(url);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("{0}\r\n{1}", e.Message, e.StackTrace);
+                        NeedUserAttention(1);
+                        return false;
+                    }
+                }
+
+                if (doc == null)
+                    return false;
+
+                //Has screenshots page verified 1/13/2021
+                //var hSPNodes = (doc.DocumentNode.SelectNodes("//li[@class=' b-list-item p-nav-item px-2 pb-1/10 -mb-1/10 text-gray-500']/a[@class='text-gray-500 hover:no-underline']"));
+                var hSPNodes = (doc.DocumentNode.SelectNodes("//li[@class=' border-b-2 border-primary-500 b-list-item p-nav-item px-2 pb-1/10 -mb-1/10 text-gray-500']/a[@class='text-gray-500 hover:no-underline']"));
+                if (hSPNodes != null)
+                {
+                    if (hSPNodes.Any(n => n.InnerText.Contains("Images")))
+                    {
+                        if (hSPNodes.First(n => n.InnerText.Contains("Images")).Attributes.Contains("href"))
+                        {
+                            mod.HasScreenshots = true;
+                        }
+                    }
+                }
+
+                //Categories verified 1/13/2021
+                var categoryNodes = (doc.DocumentNode.SelectNodes("//div[@class='flex -mx-1']/div[@class='px-1']/a/figure"));
+
+                foreach (var categoryNode in categoryNodes)
+                {
+                    if (categoryNode is null || categoryNode.Attributes is null || categoryNode.Attributes.Count < 1)
+                        continue;
+                    mod.__Categories.AddCategory(categoryNode.Attributes["title"].Value);
+                }
+
+                DownloadImages(mod);
+
+                mod.ModpageRechecked = true; //Always set or this method will be called again
+                mod.FailedToRetrieveExtraMetadata = false;
+                return true;
+            }
+            catch( Exception e)
+            {
+                Console.WriteLine("{0}\r\n{1}", e.Message, e.StackTrace);
+                NeedUserAttention(1);
+                return false;
+            }
+        }
+
+        public static void DownloadImages(Mod mod)
+        {
+            mod.FailedToRetrieveImages = true;
+            //var doc = GetHtmlDocument($"http://www.curseforge.com/minecraft/mc-mods/{mod.modIdentifier}");
+
+            if (!Directory.Exists(mod.ModIdentifier))
+                Directory.CreateDirectory(mod.ModIdentifier);
+
+            if (!Directory.Exists(mod.ModIdentifier + "/images"))
+                Directory.CreateDirectory(mod.ModIdentifier + "/images");
+
+            //Avatar
+            try
+            {
+                if (mod.CoverImage.URL != null && mod.CoverImage.URL.Length > 0)
+                {   //https://media.forgecdn.net/avatars/233/345/637071615860203079.png
+                    //https://media.forgecdn.net/avatars/thumbnails/233/345/64/64/637071615860203079.png
+                    var url = mod.CoverImage.URL.Replace("/64/64", "");
+                    url = url.Replace("/thumbnails", "");
+                    var filename = mod.ModIdentifier + "/images/" + mod.CoverImage.URL.Split('/').Last();
+                    CDNClient.DownloadFile(url.Replace("_animated",""), filename);
+                    Console.WriteLine("{0} -> {1}", url, filename);
+                }
+                else
+                {
+                    throw new Exception();
+                }
+            }
+            catch (Exception e)
+            {
+                //NeedUserAttention($"Download the avatar of {mod.ModIdentifier} manually");
+                Console.WriteLine($"Download the avatar of {mod.ModIdentifier} manually");
+                failFile.WriteLine($"Download the avatar of {mod.ModIdentifier} manually");
+            }
+
+            //Images contained in the description
+            Regex imageRegex = new Regex(@"(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg)", RegexOptions.IgnoreCase);
+
+            MatchCollection matches = imageRegex.Matches(mod.DescriptionHTML);
+
+            foreach (var match in matches.ToArray())
+            {
+                try
+                {
+                    Console.WriteLine(match.Value);
+                    CDNClient.DownloadFile(match.Value, $"{mod.ModIdentifier}/images/{match.Value.Split('/').Last()}");
+                    if (!mod.Images.Contains(match.Value))
+                        mod.Images.Add(match.Value);
+                    Thread.Sleep(100);
+                }
+                catch (Exception e)
+                {
+                    //NeedUserAttention($"Failed to download match {match.Value} {e.Message}");
+                    failFile.WriteLine($"Failed to download match {match.Value} {e.Message}");
+                }
+            }
+
+            if (mod.HasScreenshots)
+            {
+                //Images page
+                HtmlDocument doc = null;
+                try
+                {
+                    doc = GetHtmlDocument($"http://www.curseforge.com/minecraft/mc-mods/{mod.ModIdentifier}/screenshots");
+                }
+                catch (Exception e)
+                {
+                    return;
+                }
+
+                if (doc == null)
+                    return;
+
+                //verified 1/13/2021
+                var imageNodes = doc.DocumentNode.SelectNodes("//div[@class='project-screenshot-page']/div/div/article/div");
+
+                foreach (var node in imageNodes)
+                {
+                    try
+                    {
+                        if (node.HasAttributes && node.Attributes.Contains("data-featherlight"))
+                        {
+                            var url = node.Attributes["data-featherlight"].Value;
+                            var filename = mod.ModIdentifier + "/images/" + url.Split('/').Last();
+                            CDNClient.DownloadFile(url, filename);
+                            if (!mod.Images.Contains(url))
+                                mod.Images.Add(url);
+                            Console.WriteLine("{0} -> {1}", url, filename);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        NeedUserAttention($"Failed to download {node.InnerHtml} {e.Message}");
+                    }
+                }
+            }
+
+            mod.FailedToRetrieveImages = false;
+        }
+
+        /// <summary>
+        /// Obtain literally everything I decided to skip
+        /// </summary>
+        /// <returns></returns>
+        public static bool Mirror_DownloadMissedMetadata()
+        {
+            //Console.WriteLine("Mirror_DownloadMissedMetadata");
+            //Only do it every so often (keep from making too many bogus requests)
+            if (gRandom.Next(0, 4) == 0)
+                return true; //Returning true should keep the scraper going?
+
+            if (Mods.Count(n => !n.Value.ModpageRechecked) < 1)
+                return false;
+
+            var modPair = Mods.FirstOrDefault(n => !n.Value.ModpageRechecked);
+            var mod = modPair.Value;
+
+            if (mod is null)
+                return false;
+
+            if (ModsToCaptureInfoPage.Contains(mod.ModIdentifier))
+                return false; //If we haven't captured info page we should return
+
+            //Download the metadata
+            DownloadMetadata(mod);
+
+            return false;
         }
 
         /// <summary>
@@ -298,25 +676,27 @@ namespace CurseforgeMirrorer
 
             try
             {
-                //Mod description
+                //Mod description verified 1/13/2021
                 mod.Description = (doc.DocumentNode.SelectSingleNode("//div[@class='box p-4 pb-2 project-detail__content']") ?? HtmlNode.CreateNode("")).InnerText.HtmlDecode();
                 mod.DescriptionHTML = (doc.DocumentNode.SelectSingleNode("//div[@class='box p-4 pb-2 project-detail__content']") ?? HtmlNode.CreateNode("")).InnerHtml;
-                //Members
-                foreach (var authorNode in doc.DocumentNode.SelectNodes("//div[@class='flex mb-2']/div[@class='flex flex-col flex-grow']/p[@class='text-sm text-primary-500 flex']/a/span").Select(n => n.InnerText))
+                //Members verified 1/13/2021
+                //foreach (var authorNode in doc.DocumentNode.SelectNodes("//div[@class='flex mb-2']/div[@class='flex flex-col flex-grow']/p[@class='text-sm text-primary-500 flex']/a/span").Select(n => n.InnerText))
+                foreach (var authorNode in doc.DocumentNode.SelectNodes("//div[@class='flex mb-2']/div[@class='flex flex-col flex-grow']/p[@class='text-sm flex']/a/span").Select(n => n.InnerText))
                 {
                     string author = authorNode.Trim('\r', '\n', ' ', '\0', '\t');
                     if (!mod.CompleteAuthorList.Contains(author))
                         mod.CompleteAuthorList.Add(author);
                 }
-                //Source
+                //Source verified 1/13/2021
                 var srcNodes = (doc.DocumentNode.SelectNodes("//li[@class=' b-list-item p-nav-item px-2 pb-1/10 -mb-1/10 text-gray-500']/a[@class='text-gray-500 hover:no-underline']"));
                 if (srcNodes != null)
                     if (srcNodes.Any(n => n.InnerText.Contains("Source")))
                         if (srcNodes.First(n => n.InnerText.Contains("Source")).Attributes.Contains("href"))
                             mod.SourceURL = srcNodes.First(n => n.InnerText.Contains("Source")).Attributes["href"].Value;
 
-                //Download Count
-                mod.DownloadCount = Convert.ToInt32(doc.DocumentNode.SelectSingleNode("//div[@class='flex flex-col mt-auto mb-auto']/div[@class='flex']/span[@class='mr-2 text-sm text-gray-500']").InnerText.Split(' ')[0].Replace(",", ""));
+                //Download Count verified 1/13/2021
+                //mod.DownloadCount = Convert.ToInt32(doc.DocumentNode.SelectSingleNode("//div[@class='flex flex-col mt-auto mb-auto']/div[@class='flex']/span[@class='mr-2 text-sm text-gray-500']").InnerText.Split(' ')[0].Replace(",", ""));
+                mod.DownloadCount = Convert.ToInt32(doc.DocumentNode.SelectSingleNode("//div[@class='pb-4 border-b border-gray--100']/div[@class='flex flex-col mb-3']/div[4]/span[2]").InnerText.Split(' ')[0].Replace(",", ""));
 
                 //Project ID
                 mod.ProjectId = Convert.ToInt32(doc.DocumentNode.SelectSingleNode("//div[@class='pb-4 border-b border-gray--100']/div[@class='flex flex-col mb-3']/div[@class='w-full flex justify-between']/span[2]").InnerText);
@@ -349,12 +729,11 @@ namespace CurseforgeMirrorer
                         gitProcess.StartInfo.UseShellExecute = false;
                         gitProcess.StartInfo.FileName = "git.exe";
                         gitProcess.StartInfo.WorkingDirectory = mod.ModIdentifier;
-                        gitProcess.StartInfo.Arguments = $"clone {mod.SourceURL} --recursive";                        
+                        gitProcess.StartInfo.Arguments = $"clone --recursive --mirror \"{mod.SourceURL}\"";                        
                         gitProcess.Start();
-                        Console.WriteLine("Times out in 120 seconds");
-                        if (!gitProcess.WaitForExit(120000))
-                            if (NeedUserAttention("Program failed to exit after wait period. Wait anyway?"))
-                                gitProcess.WaitForExit();
+                        Console.WriteLine("Times out in 1200 seconds");
+                        if (!gitProcess.WaitForExit(1200000))
+                            gitProcess.Kill();
                         if (!gitProcess.HasExited || gitProcess.ExitCode != 0)
                         {
                             Console.WriteLine("Failed to clone {0} ({1}) ({2})", mod.ModIdentifier, mod.SourceURL, gitProcess.ExitCode);
@@ -369,7 +748,7 @@ namespace CurseforgeMirrorer
                     //Add to tar
                     if (!mod.FailedToRetrieveSource)
                     using (Process _7zProcess = new Process()) {
-                            var path = Directory.GetDirectories(mod.ModIdentifier).First() ?? throw new Exception();
+                            var path = Directory.GetDirectories(mod.ModIdentifier).Where(n => !n.EndsWith("images")).First() ?? throw new Exception();
                             var folderName = Path.GetFileName(path);
                             _7zProcess.StartInfo = new ProcessStartInfo()
                             {
@@ -379,10 +758,10 @@ namespace CurseforgeMirrorer
                                 Arguments = $"a {folderName}-source.tar {folderName} -ttar -y -sdel"
                             };
                             _7zProcess.Start();
-                            Console.WriteLine("Times out in 480 seconds");
-                            if (!_7zProcess.WaitForExit(480000))
-                                if (NeedUserAttention("Program failed to exit after wait period. Wait anyway?"))
-                                    _7zProcess.WaitForExit();
+                            Console.WriteLine("Times out in 1200 seconds");
+                            if (!_7zProcess.WaitForExit(1200000))
+                                _7zProcess.Kill();
+
                             if (!_7zProcess.HasExited || _7zProcess.ExitCode != 0)
                             {
                                 Console.WriteLine("Failed to archive repository {0} marking as failed", mod.ModIdentifier);
@@ -401,7 +780,8 @@ namespace CurseforgeMirrorer
                 {
                     Console.WriteLine("Avatar preset for {0} ({1})", mod.ModIdentifier, mod.CoverImage.URL);
                     var uri = new Uri(mod.CoverImage.URL);
-                    mod.CoverImage.Filepath = mod.ModIdentifier + "/" + mod.ModIdentifier + ".png";
+                    var ext = "." + mod.CoverImage.URL.Split('.').Last();
+                    mod.CoverImage.Filepath = mod.ModIdentifier + "/" + mod.ModIdentifier + ext;
                     //Capture image
                     try
                     {
@@ -421,7 +801,7 @@ namespace CurseforgeMirrorer
                         magickProcess.StartInfo.UseShellExecute = false;
                         magickProcess.StartInfo.FileName = "magick.exe";
                         magickProcess.StartInfo.WorkingDirectory = mod.ModIdentifier;
-                        magickProcess.StartInfo.Arguments = $"convert -verbose {mod.ModIdentifier + ".png"} {mod.ModIdentifier + ".ico"}";
+                        magickProcess.StartInfo.Arguments = $"convert -verbose {mod.ModIdentifier + ext} {mod.ModIdentifier + ".ico"}";
                         magickProcess.Start();
                         Console.WriteLine("Times out in 30 seconds");
                         magickProcess.WaitForExit(30000);
@@ -458,6 +838,7 @@ namespace CurseforgeMirrorer
                 a:;
 
                 ModsToCaptureInfoPage.Dequeue();
+                DownloadMetadata(mod, doc);
 
                 return true;
             }
@@ -475,6 +856,7 @@ namespace CurseforgeMirrorer
 
         public static bool NeedUserAttention(string message = "Program ran into an error, would you like to continue?")
         {
+            return true;
             Console.WriteLine(message + "\a\a\a");
             Interop.Interop.FlashWindowEx();
             while (true)
@@ -491,6 +873,7 @@ namespace CurseforgeMirrorer
 
         public static void NeedUserAttention(int exitCode, string message = "Program ran into an error, would you like to continue?")
         {
+            return;
             Console.WriteLine(message + "\a\a\a");
             Interop.Interop.FlashWindowEx();
             while (true)
@@ -553,21 +936,21 @@ namespace CurseforgeMirrorer
             //doc.Load("technology.1");
 
             //Parse page to obtain mods
-            string selector = "//div[@class='project-listing-row box py-3 px-4 flex flex-col lg:flex-row lg:items-center']/div[@class='flex flex-col']";
+            string selector = "//div[@class='project-listing-row box py-3 px-4 flex flex-col lg:flex-row lg:items-center']/div[@class='flex flex-col']"; //1/13/2021
             foreach (var node in doc.DocumentNode.SelectNodes(selector))
             {
                 Mod modInit = new Mod();
-                modInit.ModName = node.SelectNodes(".//h3[@class='text-primary-500 font-bold text-lg']")[0].InnerText.HtmlDecode();
-                modInit.ModIdentifier = node.SelectNodes(".//a[@class='my-auto']")[0].Attributes["href"].DeEntitizeValue.Split('/').Last();
-                modInit.Author = node.SelectNodes(".//a[@class='text-base leading-normal font-bold hover:no-underline my-auto']")[0].InnerText.HtmlDecode();
-                modInit.CreationDate = DateTime.UnixEpoch.AddSeconds(Convert.ToInt64(node.SelectNodes(".//span[@class='text-xs text-gray-500']/abbr")[0].Attributes["data-epoch"].Value));
-                var updateDateNodes = node.SelectNodes(".//span[@class='mr-2 text-xs text-gray-500']/abbr");
+                modInit.ModName = node.SelectNodes(".//h3[@class='font-bold text-lg']")[0].InnerText.HtmlDecode(); //1/13/2021
+                modInit.ModIdentifier = node.SelectNodes(".//a[@class='my-auto']")[0].Attributes["href"].DeEntitizeValue.Split('/').Last(); //1/13/2021
+                modInit.Author = node.SelectNodes(".//a[@class='text-base leading-normal font-bold hover:no-underline my-auto']")[0].InnerText.HtmlDecode(); //1/13/2021
+                modInit.CreationDate = DateTime.UnixEpoch.AddSeconds(Convert.ToInt64(node.SelectNodes(".//span[@class='text-xs text-gray-500']/abbr")[0].Attributes["data-epoch"].Value)); //1/13/2021
+                var updateDateNodes = node.SelectNodes(".//span[@class='mr-2 text-xs text-gray-500']/abbr"); //1/13/2021
                 if (updateDateNodes != null && updateDateNodes.Count > 0)
                 {
                     if (updateDateNodes[0] != null && updateDateNodes[0].Attributes.Contains("data-epoch") && updateDateNodes[0].Attributes["data-epoch"].Value != null)
                         modInit.UpdateDate = DateTime.UnixEpoch.AddSeconds(Convert.ToInt64(updateDateNodes[0].Attributes["data-epoch"].Value));
                 }
-                modInit.Synopsis = node.SelectNodes(".//p[@class='text-sm leading-snug']")[0].InnerText.HtmlDecode().Trim('\r','\n',' ', '\t'); //This is the synopsis, we do not need leading tabs
+                modInit.Synopsis = node.SelectNodes(".//p[@class='text-sm leading-snug']")[0].InnerText.HtmlDecode().Trim('\r','\n',' ', '\t'); //This is the synopsis, we do not need leading tabs //1/13/2021
 
                 if (!ParsedModIdentifiers.Contains(modInit.ModIdentifier))
                 {
@@ -612,7 +995,7 @@ namespace CurseforgeMirrorer
                 Console.WriteLine($"Capturing download page of {dlFile.Key.ModIdentifier}:{dlFile.Value.Id}");
                 string dlPageURL = $"http://www.curseforge.com/minecraft/mc-mods/{dlFile.Key.ModIdentifier}/files/{dlFile.Value.Id}";
                 var doc = GetHtmlDocument(dlPageURL);
-                string pageXPath = "//div[@class='flex flex-col md:flex-row justify-between border-b border-gray--100 mb-2 pb-4']/div/span[@class='text-sm']";
+                string pageXPath = "//div[@class='flex flex-col md:flex-row justify-between border-b border-gray--100 mb-2 pb-4']/div/span[@class='text-sm']"; //1/13/2021
                 var filename = doc.DocumentNode.SelectNodes(pageXPath)[0];
                 dlFile.Value.Filename = filename.InnerText.HtmlDecode();
                 logFile.WriteLine($"{dlFile.Value.Id}:{dlFile.Value.Filename}");
@@ -620,6 +1003,16 @@ namespace CurseforgeMirrorer
                 dlFile.Value.DownloadedFilePage = true;
                 FilesToCaptureDownloadPage.Dequeue();
                 FilesToDownload.Enqueue(dlFileId);
+
+                //Add additional versions
+                var versions = doc.DocumentNode.SelectNodes("//section[@class='flex mb-2 border-b border-gray--100 mb-2 pb-4']//span[@class='tag']");
+                if (versions != null)
+                {
+                    foreach (var version in versions)
+                    {
+                        dlFile.Value.__Versions.AddVersion(version.InnerText.Trim('\r', '\n', '\t', ' '));
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -670,7 +1063,7 @@ namespace CurseforgeMirrorer
                 }
 
                 //Capture page count
-                var pages = doc.DocumentNode.SelectNodes("//div[@class='pagination pagination-top flex items-center']");
+                var pages = doc.DocumentNode.SelectNodes("//div[@class='pagination pagination-top flex items-center']"); //1/13/2021
                 if (pages is null)
                 {
                     collect.PageCount = 1;
@@ -682,7 +1075,7 @@ namespace CurseforgeMirrorer
                 }
 
                 //Capture files
-                var files = doc.DocumentNode.SelectNodes("//tr/td/a[@data-action='file-link']");
+                var files = doc.DocumentNode.SelectNodes("//tr/td/a[@data-action='file-link']"); //1/13/2021
                 if (files != null && files.Count > 0) //Some projects have 0 files, just learned about that
                 foreach (var file in files)
                 {
@@ -696,6 +1089,16 @@ namespace CurseforgeMirrorer
                     else
                         DownloadRegistry[dlFile.Id] = dlFile;
                     collect.Files.Add(dlFile.Id);
+
+                    var parentNode = file.ParentNode;
+                    string version = parentNode.ParentNode.SelectSingleNode(".//div[@class='mr-2']").InnerText;
+                    if (version != null && version.Trim('\r', '\n', ' ').Length > 0)
+                        dlFile.__Versions.AddVersion(version.Trim('\r', '\n', ' '));
+
+                    dlFile.UploadDate = DateTime.UnixEpoch.AddSeconds(Convert.ToInt64(parentNode.ParentNode.SelectSingleNode(".//td/abbr[@class='tip standard-date standard-datetime']").Attributes["data-epoch"].Value));
+
+                    dlFile.DownloadCount = Convert.ToInt32(parentNode.ParentNode.SelectSingleNode(".//td[6]").InnerText.Trim('\r', '\n', ' ').Replace(",", ""));
+
                     //FilesToDownload.Enqueue(new KeyValuePair<Mod, DownloadFile>(collect, dlFile));
                     FilesToDownload.Enqueue(new KeyValuePair<string, int>(collect.ModIdentifier, dlFile.Id));
                 }
@@ -722,8 +1125,8 @@ namespace CurseforgeMirrorer
                 {
                     if (CompletedMods.Count >= Mods.Count)
                     {
-                        Console.WriteLine("Completed download of all mods (or pages have yet to be parsed). Sleeping for 1 second");
-                        Thread.Sleep(1000);
+                        //Console.WriteLine("Completed download of all mods (or pages have yet to be parsed). Sleeping for 1 second");
+                        //Thread.Sleep(1000);
                         return false;
                     }
 
@@ -786,6 +1189,16 @@ namespace CurseforgeMirrorer
                         DownloadRegistry.Add(dlFile.Id, dlFile);
                     else
                         DownloadRegistry[dlFile.Id] = dlFile;
+
+                    var parentNode = file.ParentNode;
+                    string version = parentNode.ParentNode.SelectSingleNode(".//div[@class='mr-2']").InnerText;
+                    if (version != null && version.Trim('\r', '\n', ' ').Length > 0)
+                        dlFile.__Versions.AddVersion(version.Trim('\r', '\n', ' '));
+
+                    dlFile.UploadDate = DateTime.UnixEpoch.AddSeconds(Convert.ToInt64(parentNode.ParentNode.SelectSingleNode(".//td/abbr[@class='tip standard-date standard-datetime']").Attributes["data-epoch"].Value));
+
+                    dlFile.DownloadCount = Convert.ToInt32(parentNode.ParentNode.SelectSingleNode(".//td[6]").InnerText.Trim('\r', '\n', ' ').Replace(",", ""));
+
                     mod.Files.Add(dlFile.Id);
                     FilesToDownload.Enqueue(new KeyValuePair<string, int>(mod.ModIdentifier, dlFile.Id));
                 }
@@ -811,7 +1224,12 @@ namespace CurseforgeMirrorer
                 nextAction = rnd.Next(0, MirrorActions.Count);
                 DownloadFiles();
             } while (!MirrorActions[nextAction]());
+            Console.WriteLine("Sleeping");
+            Thread.Sleep(1000);
         }
+
+        public static string[] naughtyVersions = { "Forge", "Fabric", "Rift", "Java 10", "Java 9", "Java 8", "Java 7", "Java 6" };
+        public static string[] includeThese = { "Forge", "Fabric", "Rift" };
 
         public static void DownloadFiles()
         {
@@ -827,20 +1245,51 @@ namespace CurseforgeMirrorer
                 filename = filename.Replace(' ', '+');//4,3 Substring(0,4) Remove(0,4)
                 filenameLink = filename.Replace(' ', '+');                
                 string link = $"https://media.forgecdn.net/files/{file.Id.ToString().Substring(0, file.Id.ToString().Length - 3)}/{file.Id.ToString().Remove(0, file.Id.ToString().Length - 3).TrimStart('0')}/{filenameLink}";
-                filename = pair.Key.ModIdentifier.WindowsEncode() + "\\" + pair.Value.Id + "-" + filename;
+                string edgelink = $"https://edge.forgecdn.net/files/{file.Id.ToString().Substring(0, file.Id.ToString().Length - 3)}/{file.Id.ToString().Remove(0, file.Id.ToString().Length - 3).TrimStart('0')}/{file.Filename}";
+
+                string version = "";
+                if (pair.Value.__Versions.GetVersions().Count() > 0)
+                {
+                    if (pair.Value.__Versions.GetVersions().Count(n => !naughtyVersions.Any(n.Equals)) > 0)
+                        version = pair.Value.__Versions.GetVersions().Where(n => includeThese.Any(n.Equals)).FirstOrDefault() ?? "";
+                    version += (version.Length > 0 ? "-" : "") + pair.Value.__Versions.GetVersions().Where(n => !naughtyVersions.Any(n.Equals)).FirstOrDefault();
+                }
+
+                if (version == null || version.Length < 1)
+                    version = "";
+                else
+                    version += '-';
+
+                filename = pair.Key.ModIdentifier.WindowsEncode() + "\\" + pair.Value.Id + "-" + version + filename;
                 Directory.CreateDirectory(pair.Key.ModIdentifier.WindowsEncode());
                 try
                 {
-                    CDNClient.DownloadFile(link, filename);
-                    Console.WriteLine("Downloaded {0} -> {1}", link, filename);
-                    file.Downloaded = true;
-                    FilesToDownload.Dequeue();
+                    if (!pair.Value.DownloadedFilePage)
+                    {
+                        CDNClient.DownloadFile(link, filename);
+                        Console.WriteLine("Downloaded {0} -> {1}", link, filename);
+                        linkFile.WriteLine(link);
+                        file.Filename = filename;
+                        file.Url = link;
+                        file.Downloaded = true;
+                        FilesToDownload.Dequeue();
+                    }
+                    else
+                    {
+                        CDNClient.DownloadFile(edgelink, filename);
+                        Console.WriteLine("Downloaded {0} -> {1} USING EDGE", edgelink, filename);
+                        linkFile.WriteLine(edgelink);
+                        file.Filename = filename;
+                        file.Url = edgelink;
+                        file.Downloaded = true;
+                        FilesToDownload.Dequeue();
+                    }
                 }
                 catch (Exception e)
                 {
                     if (pair.Value.DownloadedFilePage)
                     {
-                        string er = $"Could not download {link}: {e.Message}";
+                        string er = $"Could not download {edgelink}: {e.Message}";
                         Console.WriteLine(er);
                         failFile.WriteLine(er);
                         failFile.Flush();
@@ -872,6 +1321,33 @@ namespace CurseforgeMirrorer
         }
 
         public static void TestXPath(string path)
+        {
+            HtmlDocument doc = new HtmlDocument();
+            doc.Load(path);
+
+            //Capture files
+            var files = doc.DocumentNode.SelectNodes("//tr/td/a[@data-action='file-link']"); //1/13/2021
+            if (files != null && files.Count > 0) //Some projects have 0 files, just learned about that
+                foreach (var file in files)
+                {
+                    DownloadFile dlFile = new DownloadFile();
+                    dlFile.Id = Convert.ToInt32(file.Attributes["href"].Value.Split('/').Last());
+                    dlFile.Filename = file.InnerText.HtmlDecode();
+                    Console.WriteLine("{0} : {1}", dlFile.Id, dlFile.Filename);
+                    logFile.WriteLine("{0}:{1}", dlFile.Id, dlFile.Filename);
+
+                    var parentNode = file.ParentNode;
+                    string version = parentNode.ParentNode.SelectSingleNode(".//div[@class='mr-2']").InnerText;
+                    if (version != null && version.Trim('\r', '\n', ' ').Length > 0)
+                        dlFile.__Versions.AddVersion(version.Trim('\r', '\n', ' '));
+
+                    dlFile.UploadDate = DateTime.UnixEpoch.AddSeconds(Convert.ToInt64(parentNode.ParentNode.SelectSingleNode(".//td/abbr[@class='tip standard-date standard-datetime']").Attributes["data-epoch"].Value));
+
+                    dlFile.DownloadCount = Convert.ToInt32(parentNode.ParentNode.SelectSingleNode(".//td[6]").InnerText.Trim('\r', '\n', ' ').Replace(",", ""));
+                }
+        }
+
+        public static void TestXPath2(string path)
         {
             HtmlDocument doc = new HtmlDocument();
             doc.Load(path);
@@ -979,7 +1455,7 @@ namespace CurseforgeMirrorer
 
                     Thread.Sleep(1800000);
                     Console.Write("Saving..."); //Just hope a property isn't being iterated over
-                    SaveState($"savedState.new.auto.{current++ % 10}.json");
+                    SaveState($"savedState.new.auto.{current++ % 3}.json");
                     //Console_CancelKeyPress(null, null);
                     Console.WriteLine("Saved.");
                 }
@@ -1000,7 +1476,10 @@ namespace CurseforgeMirrorer
 
         public static void Main(string[] args)
         {
-            Environment.CurrentDirectory = "D:\\curseforge\\";
+            Environment.CurrentDirectory = "H:\\curseforge_new\\";            
+            //ProxyClient.Proxy = new WebProxy("127.0.0.1", 9097); //Cloudscrape request system hosted on a seperate machine
+            //ProxyClient.DownloadFile("http://www.curseforge.com/minecraft/mc-mods/ForgeEndertech/files/all", "ForgeEndertech");
+            //TestXPath("ForgeEndertech");
             //DownloadFile file = new DownloadFile();
             //file.Id = 3333444;
             //file.Filename = "unity.jar";
@@ -1040,6 +1519,7 @@ namespace CurseforgeMirrorer
                     CompletedMods = data.CompletedMods;
                     ParsedPages = data.ParsedPages;
                     lastRequest = data.lastRequest;
+                    requestCount = data.requestCount;
                     /*
                     Mods = jsonSerializer.Deserialize<Dictionary<string, Mod>>(jr);
                     ModsToScrape = jsonSerializer.Deserialize<Queue<Mod>>(jr);
@@ -1067,7 +1547,17 @@ namespace CurseforgeMirrorer
             data.CompletedMods = CompletedMods;
             data.ParsedPages = ParsedPages;
             data.lastRequest = lastRequest;
-            
+            data.requestCount = requestCount;
+
+            //Move
+            //FilesCouldNotDownload.Clear();
+            //SaveState("savedState.new.fixed.json");
+            //return;
+
+            //GET OUT
+            //SaveState("new.json");
+            //return;
+
             /*
             var copy = data.FilesToCaptureDownloadPage.ToArray();
             data.FilesToCaptureDownloadPage.Clear();
@@ -1129,10 +1619,12 @@ namespace CurseforgeMirrorer
             MirrorActions.Add(Mirror_LoadModPage);
             MirrorActions.Add(Mirror_DownloadModPage);
             MirrorActions.Add(Mirror_LoadModInfoPage);
+            MirrorActions.Add(Mirror_DownloadMissedMetadata);
+
             var savingThread = new Thread(SaveThread);
             savingThread.Start();
 
-            ProxyClient.Proxy = new WebProxy("192.168.128.17", 9097); //Cloudscrape request system hosted on a seperate machine
+            ProxyClient.Proxy = new WebProxy("127.0.0.1", 9097); //Cloudscrape request system hosted on a seperate machine
 
             try
             {
@@ -1141,7 +1633,15 @@ namespace CurseforgeMirrorer
                     PerformRandomMirrorAction();
                     if (Console.KeyAvailable)
                         if (Console.ReadKey(true).Key == ConsoleKey.Spacebar)
-                            Console.WriteLine($"STATUS: Pages: {ParsedPages.Count}/{PageCount} Mods: {{Σ{DownloadRegistry.Count}:{Mods.Count}:{ModsToScrape.Count}:{CompletedMods.Count}:{ParsedModIdentifiers.Count}}} Files: {{+{DownloadRegistry.Sum(n => n.Value.Downloaded ? 1 : 0)}:{FilesToDownload.Count}:{FilesToCaptureDownloadPage.Count}:!{FilesCouldNotDownload.Sum(n => n.Value.Count)}}} Info: {{+{CompletedModInfo.Count}:!{Mods.Sum(n => n.Value.FailedToRetrieveSource ? 1 : 0)}:-{Mods.Sum(n => n.Value.HasImage ? 1 : 0)}:{Mods.Sum(n => n.Value.HasSource ? 1 : 0)}}}");
+                        {
+                            double completion = (double)DownloadRegistry.Sum(n => n.Value.Downloaded ? 1 : 0) / 
+                                                (double)(((double)DownloadRegistry.Count / (double)Mods.Count) * (double)ParsedModIdentifiers.Count);
+                            completion = Math.Round(completion, 5);
+                            var fgOld = Console.ForegroundColor; var bgOld = Console.BackgroundColor;
+                            Console.ForegroundColor = ConsoleColor.Black; Console.BackgroundColor = ConsoleColor.White;
+                            Console.WriteLine($"STATUS: [{completion * 100}%] Requests: {requestCount} Pages: {ParsedPages.Count}/{PageCount} Mods: {{Σ{DownloadRegistry.Count}:{Mods.Count}:{ModsToScrape.Count}:{CompletedMods.Count}:{ParsedModIdentifiers.Count}}} Files: {{+{DownloadRegistry.Sum(n => n.Value.Downloaded ? 1 : 0)}:{FilesToDownload.Count}:{FilesToCaptureDownloadPage.Count}:!{FilesCouldNotDownload.Sum(n => n.Value.Count)}}} Info: {{+{CompletedModInfo.Count}:!{Mods.Sum(n => n.Value.FailedToRetrieveSource ? 1 : 0)}:-{Mods.Sum(n => n.Value.HasImage ? 1 : 0)}:{Mods.Sum(n => n.Value.HasSource ? 1 : 0)}}}");
+                            Console.ForegroundColor = fgOld; Console.BackgroundColor = bgOld;
+                        }
                 }
             }
             catch (Exception e)
@@ -1184,8 +1684,10 @@ namespace CurseforgeMirrorer
             public List<int> ParsedPages
                 = new List<int>();
             public DateTime lastRequest = DateTime.Now.AddSeconds(-60);
+            public int requestCount { get => Program.requestCount; set => Program.requestCount = value; }
         }
 
+        //Very first container (keeping for nostaglic reasons; because it was shit)
         public class Container
         {
             public Dictionary<string, Mod> Mods;
@@ -1196,6 +1698,7 @@ namespace CurseforgeMirrorer
             public HashSet<string> CompletedMods;
             public List<int> ParsedPages;
             public DateTime lastRequest = DateTime.Now.AddSeconds(-60);
+            public int requestCount { get => Program.requestCount; set => Program.requestCount = value; }
         }
 
         private static void SaveState(string path)
